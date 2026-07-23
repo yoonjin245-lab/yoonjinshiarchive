@@ -1,24 +1,37 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import type { ArchiveItem } from "@/lib/archive-data";
-import { readLocalArchiveItems } from "@/lib/local-archive";
+import { fetchArchiveItems } from "@/lib/archive-api";
 
 export function useArchiveItems(baseItems: ArchiveItem[]) {
-  const [localItems, setLocalItems] = useState<ArchiveItem[]>([]);
+  const [remoteItems, setRemoteItems] = useState<ArchiveItem[]>([]);
 
   useEffect(() => {
-    const sync = () => setLocalItems(readLocalArchiveItems());
+    let isMounted = true;
+
+    const sync = async () => {
+      try {
+        const items = await fetchArchiveItems();
+
+        if (isMounted) {
+          setRemoteItems(items);
+        }
+      } catch {
+        if (isMounted) {
+          setRemoteItems([]);
+        }
+      }
+    };
 
     sync();
-    window.addEventListener("storage", sync);
     window.addEventListener("archive-items-updated", sync);
 
     return () => {
-      window.removeEventListener("storage", sync);
+      isMounted = false;
       window.removeEventListener("archive-items-updated", sync);
     };
   }, []);
 
-  return [...localItems, ...baseItems];
+  return [...remoteItems, ...baseItems];
 }

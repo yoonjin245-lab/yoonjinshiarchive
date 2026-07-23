@@ -1,4 +1,4 @@
-export type Project = {
+﻿export type Project = {
   id: string;
   name?: string;
   description?: string;
@@ -7,6 +7,7 @@ export type Project = {
 export type ArchiveItem = {
   id: string;
   imageUrl: string;
+  imagePath?: string;
   projectId: string;
   tags: string[];
   caption?: string;
@@ -35,3 +36,4 @@ export const projects: Project[] = [
 ];
 
 export const archiveItems: ArchiveItem[] = [];
+

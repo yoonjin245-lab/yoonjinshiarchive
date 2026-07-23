@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import type { ArchiveItem } from "@/lib/archive-data";
-import { addLocalArchiveItem, deleteLocalArchiveItem, readLocalArchiveItems, updateLocalArchiveItem } from "@/lib/local-archive";
+import { createArchiveItem, deleteArchiveItem, fetchArchiveItems, updateArchiveItem } from "@/lib/archive-api";
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
 const AUTH_KEY = "yoonjin-shi-admin-auth";
+const PASSWORD_KEY = "yoonjin-shi-admin-password";
 
 function todayYYMMDD() {
   const now = new Date();
@@ -30,9 +30,13 @@ export function AdminUpload() {
   const [items, setItems] = useState<ArchiveItem[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
+  const [savedPassword, setSavedPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [status, setStatus] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [projectId, setProjectId] = useState("P01");
   const [date, setDate] = useState(todayYYMMDD());
   const [tags, setTags] = useState("drawing, architecture");
@@ -40,19 +44,28 @@ export function AdminUpload() {
   const [description, setDescription] = useState("");
   const [featured, setFeatured] = useState(true);
 
-  useEffect(() => {
-    setItems(readLocalArchiveItems());
-    setIsAuthenticated(window.sessionStorage.getItem(AUTH_KEY) === "true");
-  }, []);
-
-  const refreshItems = () => {
-    setItems(readLocalArchiveItems());
+  const refreshItems = async () => {
+    const archiveItems = await fetchArchiveItems();
+    setItems(archiveItems);
     notifyArchiveUpdated();
   };
 
+  useEffect(() => {
+    const storedPassword = window.sessionStorage.getItem(PASSWORD_KEY) ?? "";
+    const storedAuth = window.sessionStorage.getItem(AUTH_KEY) === "true";
+
+    setSavedPassword(storedPassword);
+    setIsAuthenticated(storedAuth && Boolean(storedPassword));
+
+    if (storedAuth && storedPassword) {
+      refreshItems().catch(() => setStatus("Archive items could not be loaded."));
+    }
+  }, []);
+
   const resetForm = () => {
     setEditingId(null);
-    setImageUrl("");
+    setSelectedFile(null);
+    setImagePreview("");
     setProjectId("P01");
     setDate(todayYYMMDD());
     setTags("drawing, architecture");
@@ -61,18 +74,26 @@ export function AdminUpload() {
     setFeatured(true);
   };
 
-  const handleLogin = (event: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (password === ADMIN_PASSWORD) {
-      window.sessionStorage.setItem(AUTH_KEY, "true");
-      setIsAuthenticated(true);
-      setAuthError("");
-      setPassword("");
+    if (!password.trim()) {
+      setAuthError("Password is required.");
       return;
     }
 
-    setAuthError("Password is incorrect.");
+    window.sessionStorage.setItem(AUTH_KEY, "true");
+    window.sessionStorage.setItem(PASSWORD_KEY, password);
+    setSavedPassword(password);
+    setIsAuthenticated(true);
+    setAuthError("");
+    setPassword("");
+
+    try {
+      await refreshItems();
+    } catch {
+      setStatus("Archive items could not be loaded yet.");
+    }
   };
 
   const handleImageChange = (file?: File) => {
@@ -80,66 +101,89 @@ export function AdminUpload() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => setImageUrl(String(reader.result));
-    reader.readAsDataURL(file);
+    setSelectedFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setStatus("");
 
-    if (!imageUrl) {
+    if (!editingId && !selectedFile) {
+      setStatus("Image file is required.");
       return;
     }
 
-    const item: ArchiveItem = {
-      id: editingId ?? `local-${Date.now()}`,
-      imageUrl,
+    const payload = {
       projectId: projectId.trim() || "P01",
       tags: tagsFromInput(tags),
       caption: caption.trim() || undefined,
       description: description.trim() || undefined,
       date: date.trim() || todayYYMMDD(),
       featured,
-      alt: caption.trim() || "Uploaded archive image",
+      alt: caption.trim() || "Archive image",
     };
 
-    if (editingId) {
-      updateLocalArchiveItem(item);
-    } else {
-      addLocalArchiveItem(item);
-    }
+    setIsSaving(true);
 
-    refreshItems();
-    resetForm();
+    try {
+      if (editingId) {
+        await updateArchiveItem(editingId, savedPassword, payload, selectedFile ?? undefined);
+        setStatus("Archive item updated.");
+      } else if (selectedFile) {
+        await createArchiveItem(savedPassword, payload, selectedFile);
+        setStatus("Archive item uploaded.");
+      }
+
+      await refreshItems();
+      resetForm();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Save failed.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = (item: ArchiveItem) => {
     setEditingId(item.id);
-    setImageUrl(item.imageUrl);
+    setSelectedFile(null);
+    setImagePreview(item.imageUrl);
     setProjectId(item.projectId);
     setDate(item.date);
     setTags(item.tags.join(", "));
     setCaption(item.caption ?? "");
     setDescription(item.description ?? "");
     setFeatured(item.featured);
+    setStatus("");
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this archive item?")) {
       return;
     }
 
-    deleteLocalArchiveItem(id);
-    refreshItems();
+    setStatus("");
+    setIsSaving(true);
 
-    if (editingId === id) {
-      resetForm();
+    try {
+      await deleteArchiveItem(id, savedPassword);
+      await refreshItems();
+      setStatus("Archive item deleted.");
+
+      if (editingId === id) {
+        resetForm();
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Delete failed.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleLogout = () => {
     window.sessionStorage.removeItem(AUTH_KEY);
+    window.sessionStorage.removeItem(PASSWORD_KEY);
+    setSavedPassword("");
     setIsAuthenticated(false);
     resetForm();
   };
@@ -178,7 +222,7 @@ export function AdminUpload() {
             <input type="file" accept="image/*" onChange={(event) => handleImageChange(event.target.files?.[0])} className="border border-neutral-300 p-3" />
           </label>
 
-          {imageUrl ? <img src={imageUrl} alt="Upload preview" className="aspect-[4/5] w-full max-w-xs object-cover" /> : null}
+          {imagePreview ? <img src={imagePreview} alt="Upload preview" className="aspect-[4/5] w-full max-w-xs object-cover" /> : null}
 
           <div className="grid grid-cols-2 gap-4">
             <label className="grid gap-2">
@@ -211,8 +255,10 @@ export function AdminUpload() {
             <span>Show in Recent Additions</span>
           </label>
 
+          {status ? <p className="text-neutral-500">{status}</p> : null}
+
           <div className="flex gap-4">
-            <button type="submit" className="underline underline-offset-4">
+            <button type="submit" disabled={isSaving} className="underline underline-offset-4 disabled:text-neutral-400">
               {editingId ? "Save Changes" : "Add Image"}
             </button>
             {editingId ? (
@@ -225,7 +271,7 @@ export function AdminUpload() {
       </section>
 
       <section>
-        <h2 className="font-normal">Local Uploads</h2>
+        <h2 className="font-normal">Archive Items</h2>
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3">
           {items.map((item) => (
             <article key={item.id} className="grid gap-2">
