@@ -8,19 +8,19 @@ type ArchiveCardProps = {
 
 export function ArchiveCard({ item, onClick }: ArchiveCardProps) {
   const content = (
-    <div className="relative aspect-[1.6/1] w-full overflow-hidden">
-      <img
-        src={item.imageUrl}
-        alt={item.alt ?? item.caption ?? item.id}
-        className="h-full w-full object-contain object-center transition-opacity duration-150 group-hover:opacity-0"
-      />
-
-      <div className="absolute inset-0 flex items-end justify-end bg-black opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-        <span className="p-2 text-[10px] leading-none text-white">
-          {item.projectId}
-        </span>
+    <>
+      <div className="aspect-[1.6/1] w-full overflow-hidden">
+        <img
+          src={item.imageUrl}
+          alt={item.alt ?? item.caption ?? item.id}
+          className="h-full w-full object-contain object-center"
+        />
       </div>
-    </div>
+
+      <span className="mt-1 inline-block bg-black px-1.5 py-0.5 text-[10px] leading-none text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+        {item.projectId}
+      </span>
+    </>
   );
 
   if (!onClick) {
