@@ -13,18 +13,19 @@ export function HomeView({ items }: HomeViewProps) {
   const recentAdditions = archiveItems.filter((item) => item.featured).slice(0, 9);
 
   return (
-    <div className="grid gap-20">
-      <section className="min-h-[54vh] max-w-3xl pt-8">
-        <h1 className="whitespace-pre-line text-base font-normal leading-relaxed tracking-normal">
+    <div className="grid gap-12">
+      <section className="max-w-[540px] pt-8 text-sm font-normal leading-snug text-black">
+        <h1 className="whitespace-pre-line font-normal">
           {"Every project starts\nwith a small idea."}
         </h1>
-        <p className="mt-6 whitespace-pre-line text-base font-normal leading-relaxed text-neutral-700">
+
+        <p className="mt-6 whitespace-pre-line">
           {"This archive documents\nthoughts,\nimages,\ndrawings,\nand completed work."}
         </p>
       </section>
 
       <section className="grid gap-5">
-        <h2 className="text-sm font-normal">Recent Additions</h2>
+        <h2 className="text-sm font-normal text-black">Recent Additions</h2>
         <ArchiveGrid items={recentAdditions} />
       </section>
     </div>

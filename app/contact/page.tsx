@@ -1,6 +1,6 @@
 export default function ContactPage() {
   return (
-    <section className="max-w-[540px] pt-[220px] text-sm leading-snug">
+    <section className="max-w-[540px] pt-[180px] text-sm leading-snug">
       <h1 className="font-normal">Yoonjin Shi</h1>
       <div>
         <p>Architecture Student</p>
