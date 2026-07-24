@@ -8,7 +8,7 @@ type ArchiveGridProps = {
 
 export function ArchiveGrid({ items, onItemClick }: ArchiveGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9">
       {items.map((item, index) => (
         <ArchiveCard key={item.id} item={item} onClick={onItemClick} priority={index < 4} />
       ))}

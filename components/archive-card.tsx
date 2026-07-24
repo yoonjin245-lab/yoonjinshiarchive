@@ -12,7 +12,7 @@ export function ArchiveCard({ item, onClick }: ArchiveCardProps) {
       <img
         src={item.imageUrl}
         alt={item.alt ?? item.caption ?? item.id}
-        className="h-full w-full object-cover transition-opacity duration-150 group-hover:opacity-80"
+        className="aspect-[1.4/1] w-full bg-neutral-100 object-contain opacity-85 transition-opacity duration-200 group-hover:opacity-100"
       />
       <span className="absolute bottom-2 right-2 text-xs opacity-0 transition-opacity duration-150 group-hover:opacity-100">
         {item.projectId}
