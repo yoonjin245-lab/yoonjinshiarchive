@@ -24,14 +24,14 @@ export function ArchiveCard({ item, onClick }: ArchiveCardProps) {
   );
 
   if (!onClick) {
-    return <div className="group relative aspect-[1/1.4] w-full overflow-hidden">{content}</div>;
+    return <div className="group relative aspect-[1.6/1] w-full overflow-hidden">{content}</div>;
   }
 
   return (
     <button
       type="button"
       onClick={() => onClick(item)}
-      className="group relative aspect-[1/1.4] w-full overflow-hidden text-left"
+      className="group relative aspect-[1.6/1] w-full overflow-hidden text-left"
       aria-label={`Open ${item.caption ?? item.id}`}
     >
       {content}
